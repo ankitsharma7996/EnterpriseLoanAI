@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/Services/" />
+  <Folder Name="/src/Services/LoanService/">
+    <Project Path="src/Services/LoanService/LoanService.Api/LoanService.Api.csproj" />
+    <Project Path="src/Services/LoanService/LoanService.Application/LoanService.Application.csproj" />
+    <Project Path="src/Services/LoanService/LoanService.Domain/LoanService.Domain.csproj" />
+    <Project Path="src/Services/LoanService/LoanService.Infrastructure/LoanService.Infrastructure.csproj" />
+  </Folder>
+</Solution>
