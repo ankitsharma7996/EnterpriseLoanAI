@@ -40,6 +40,23 @@ public sealed class HttpCorrelationContextTests
             exception.Message);
     }
 
+    [Fact]
+    public void HttpCorrelationContext_ThrowsWhenHttpContextDoesNotExist()
+    {
+        // Arrange
+        var context = new HttpCorrelationContext(
+            new HttpContextAccessor());
+
+        // Act
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => context.CorrelationId);
+
+        // Assert
+        Assert.Equal(
+            "No active HTTP context is available.",
+            exception.Message);
+    }
+
     private static HttpCorrelationContext CreateCorrelationContext(
         HttpContext httpContext)
     {
