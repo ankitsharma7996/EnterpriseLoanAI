@@ -8,6 +8,7 @@
     <Project Path="src/Services/LoanService/LoanService.Infrastructure/LoanService.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/Services/LoanService/">
+    <Project Path="tests/Services/LoanService/LoanService.Api.Tests/LoanService.Api.Tests.csproj" />
     <Project Path="tests/Services/LoanService/LoanService.Infrastructure.Tests/LoanService.Infrastructure.Tests.csproj" />
   </Folder>
 </Solution>

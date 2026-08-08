@@ -13,6 +13,7 @@ public sealed class OutboxProcessorTests
     [Fact]
     public async Task Concurrent_publishers_publish_each_message_once()
     {
+        // Arrange
         var time = new MutableTimeProvider();
         var messages = Enumerable.Range(1, 20)
             .Select(_ => CreateMessage(time.GetUtcNow()))
@@ -25,10 +26,12 @@ public sealed class OutboxProcessorTests
         var second = CreateProcessor(
             store, publisher, time, options, "publisher-two");
 
+        // Act
         await Task.WhenAll(
             first.ProcessBatchAsync(TestContext.Current.CancellationToken),
             second.ProcessBatchAsync(TestContext.Current.CancellationToken));
 
+        // Assert
         Assert.Equal(20, publisher.PublishedIds.Count);
         Assert.Equal(20, publisher.PublishedIds.Distinct().Count());
         Assert.All(messages, message =>
@@ -38,6 +41,7 @@ public sealed class OutboxProcessorTests
     [Fact]
     public async Task Stale_recovery_does_not_consume_publish_retry()
     {
+        // Arrange
         var time = new MutableTimeProvider();
         var message = CreateMessage(time.GetUtcNow());
         var store = new FakeOutboxStore([message]);
@@ -48,9 +52,11 @@ public sealed class OutboxProcessorTests
         var processor = CreateProcessor(
             store, new FakePublisher(), time, CreateOptions(), "replacement");
 
+        // Act
         var recovered = await processor.RecoverStaleClaimsAsync(
             TestContext.Current.CancellationToken);
 
+        // Assert
         Assert.Equal(1, recovered);
         Assert.Equal(OutboxMessageStatus.Pending, message.Status);
         Assert.Equal(0, message.RetryCount);
@@ -60,6 +66,7 @@ public sealed class OutboxProcessorTests
     [Fact]
     public async Task Retry_exhaustion_marks_message_failed()
     {
+        // Arrange
         var time = new MutableTimeProvider();
         var message = CreateMessage(time.GetUtcNow());
         var store = new FakeOutboxStore([message]);
@@ -68,12 +75,14 @@ public sealed class OutboxProcessorTests
             store, publisher, time,
             CreateOptions(maximumRetryCount: 2), "publisher");
 
+        // Act
         await processor.ProcessBatchAsync(
             TestContext.Current.CancellationToken);
         time.Advance(TimeSpan.FromMinutes(1));
         await processor.ProcessBatchAsync(
             TestContext.Current.CancellationToken);
 
+        // Assert
         Assert.Equal(OutboxMessageStatus.Failed, message.Status);
         Assert.Equal(2, message.RetryCount);
         Assert.NotNull(message.LastError);
@@ -82,6 +91,7 @@ public sealed class OutboxProcessorTests
     [Fact]
     public async Task Successful_publish_marks_message_published()
     {
+        // Arrange
         var time = new MutableTimeProvider();
         var message = CreateMessage(time.GetUtcNow());
         var publisher = new FakePublisher();
@@ -92,9 +102,11 @@ public sealed class OutboxProcessorTests
             CreateOptions(),
             "publisher");
 
+        // Act
         var count = await processor.ProcessBatchAsync(
             TestContext.Current.CancellationToken);
 
+        // Assert
         Assert.Equal(1, count);
         Assert.Equal([message.Id], publisher.PublishedIds);
         Assert.Equal(OutboxMessageStatus.Published, message.Status);
@@ -104,6 +116,7 @@ public sealed class OutboxProcessorTests
     [Fact]
     public async Task Service_Bus_failure_schedules_publish_retry()
     {
+        // Arrange
         var time = new MutableTimeProvider();
         var message = CreateMessage(time.GetUtcNow());
         var processor = CreateProcessor(
@@ -113,9 +126,11 @@ public sealed class OutboxProcessorTests
             CreateOptions(maximumRetryCount: 3),
             "publisher");
 
+        // Act
         await processor.ProcessBatchAsync(
             TestContext.Current.CancellationToken);
 
+        // Assert
         Assert.Equal(OutboxMessageStatus.Pending, message.Status);
         Assert.Equal(1, message.RetryCount);
         Assert.NotNull(message.NextAttemptOnUtc);
@@ -125,6 +140,7 @@ public sealed class OutboxProcessorTests
     [Fact]
     public async Task Crash_after_claim_is_recovered_and_published()
     {
+        // Arrange
         var time = new MutableTimeProvider();
         var message = CreateMessage(time.GetUtcNow());
         var store = new FakeOutboxStore([message]);
@@ -137,15 +153,19 @@ public sealed class OutboxProcessorTests
         var replacement = CreateProcessor(
             store, publisher, time, CreateOptions(), "replacement");
 
-        Assert.Equal(0, await replacement.ProcessBatchAsync(
-            TestContext.Current.CancellationToken));
+        // Act
+        var countBeforeRecovery = await replacement.ProcessBatchAsync(
+            TestContext.Current.CancellationToken);
 
         time.Advance(TimeSpan.FromMinutes(6));
         await replacement.RecoverStaleClaimsAsync(
             TestContext.Current.CancellationToken);
-        Assert.Equal(1, await replacement.ProcessBatchAsync(
-            TestContext.Current.CancellationToken));
+        var countAfterRecovery = await replacement.ProcessBatchAsync(
+            TestContext.Current.CancellationToken);
 
+        // Assert
+        Assert.Equal(0, countBeforeRecovery);
+        Assert.Equal(1, countAfterRecovery);
         Assert.Equal([message.Id], publisher.PublishedIds);
         Assert.Equal(OutboxMessageStatus.Published, message.Status);
         Assert.Equal(0, message.RetryCount);
