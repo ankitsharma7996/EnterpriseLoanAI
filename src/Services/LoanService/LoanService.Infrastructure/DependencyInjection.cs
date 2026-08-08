@@ -86,6 +86,8 @@ public static class DependencyInjection
         services.AddSingleton(
             new ServiceBusClient(serviceBusConnectionString));
 
+        services.AddSingleton<OutboxPublisherIdentity>();
+
         services.AddSingleton(serviceProvider =>
         {
             var client =
@@ -95,6 +97,9 @@ public static class DependencyInjection
                 serviceBusOptions.LoanEventsTopicName);
         });
 
+        services.AddScoped<IOutboxStore, SqlServerOutboxStore>();
+        services.AddScoped<IOutboxMessagePublisher,
+            ServiceBusOutboxMessagePublisher>();
         services.AddScoped<OutboxProcessor>();
 
         services.AddHostedService<

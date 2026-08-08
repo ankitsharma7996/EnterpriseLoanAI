@@ -1,5 +1,8 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 
+using FluentValidation;
+using LoanService.Application.Abstractions.Validation;
+
 namespace LoanService.Application;
 
 public static class DependencyInjection
@@ -8,8 +11,16 @@ public static class DependencyInjection
         this IServiceCollection services)
     {
         services.AddMediatR(configuration =>
+        {
             configuration.RegisterServicesFromAssembly(
-                typeof(DependencyInjection).Assembly));
+                typeof(DependencyInjection).Assembly);
+            configuration.AddOpenBehavior(
+                typeof(ValidationBehavior<,>));
+        });
+
+        services.AddValidatorsFromAssembly(
+            typeof(DependencyInjection).Assembly,
+            includeInternalTypes: true);
 
         services.AddSingleton(TimeProvider.System);
 

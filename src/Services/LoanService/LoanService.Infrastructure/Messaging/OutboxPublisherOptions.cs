@@ -13,4 +13,6 @@ public sealed class OutboxPublisherOptions
     public int MaximumRetryCount { get; init; } = 10;
 
     public int ProcessingTimeoutSeconds { get; init; } = 300;
+
+    public string? PublisherId { get; init; }
 }

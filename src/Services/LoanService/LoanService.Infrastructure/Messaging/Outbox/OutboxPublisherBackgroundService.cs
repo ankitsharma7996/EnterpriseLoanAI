@@ -47,6 +47,9 @@ internal sealed class OutboxPublisherBackgroundService
                     scope.ServiceProvider
                         .GetRequiredService<OutboxProcessor>();
 
+                await processor.RecoverStaleClaimsAsync(
+                    stoppingToken);
+
                 var processedCount =
                     await processor.ProcessBatchAsync(
                         stoppingToken);

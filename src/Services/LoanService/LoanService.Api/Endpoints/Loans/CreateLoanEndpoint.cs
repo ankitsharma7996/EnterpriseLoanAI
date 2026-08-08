@@ -1,6 +1,5 @@
 ﻿using LoanService.Api.Contracts.Loans;
 using LoanService.Application.Loans.CreateLoan;
-using LoanService.Domain.Loans;
 using MediatR;
 
 namespace LoanService.Api.Endpoints.Loans;
@@ -18,80 +17,9 @@ public static class CreateLoanEndpoint
                     ISender sender,
                     CancellationToken cancellationToken) =>
                 {
-                    if (string.IsNullOrWhiteSpace(request.LoanNumber))
-                    {
-                        return Results.BadRequest(new
-                        {
-                            Error = "Loan number is required."
-                        });
-                    }
-
-                    if (request.LoanNumber.Trim().Length >
-                        Loan.MaximumLoanNumberLength)
-                    {
-                        return Results.BadRequest(new
-                        {
-                            Error = $"Loan number cannot exceed {Loan.MaximumLoanNumberLength} characters."
-                        });
-                    }
-
-                    if (request.CustomerId == Guid.Empty)
-                    {
-                        return Results.BadRequest(new
-                        {
-                            Error = "Customer ID is required."
-                        });
-                    }
-
-                    if (request.RequestedAmount <= 0)
-                    {
-                        return Results.BadRequest(new
-                        {
-                            Error = "Requested amount must be greater than zero."
-                        });
-                    }
-
-                    if (request.RequestedAmount >
-                        Loan.MaximumRequestedAmount)
-                    {
-                        return Results.BadRequest(new
-                        {
-                            Error = $"Requested amount cannot exceed {Loan.MaximumRequestedAmount}."
-                        });
-                    }
-
-                    if (decimal.Round(request.RequestedAmount, 2) !=
-                        request.RequestedAmount)
-                    {
-                        return Results.BadRequest(new
-                        {
-                            Error = "Requested amount cannot have more than two decimal places."
-                        });
-                    }
-
-                    if (string.IsNullOrWhiteSpace(request.Currency))
-                    {
-                        return Results.BadRequest(new
-                        {
-                            Error = "Currency is required."
-                        });
-                    }
-
-
-                    var normalizedCurrency =
-                        request.Currency.Trim().ToUpperInvariant();
-
-                    if (normalizedCurrency.Length != Loan.CurrencyLength ||
-                        !normalizedCurrency.All(character =>
-                            character is >= 'A' and <= 'Z'))
-                    {
-                        return Results.BadRequest(new
-                        {
-                            Error = "Currency must contain exactly three letters."
-                        });
-                    }
-
-                    var correlationId = TryGetCorrelationId(httpContext.Request.Headers) ?? Guid.NewGuid();
+                    var correlationId =
+                        TryGetCorrelationId(httpContext.Request.Headers)
+                        ?? Guid.NewGuid();
 
                     var command = new CreateLoanCommand(
                         request.LoanNumber,
