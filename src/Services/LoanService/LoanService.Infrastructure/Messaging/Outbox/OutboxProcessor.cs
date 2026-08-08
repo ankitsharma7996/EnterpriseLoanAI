@@ -1,4 +1,5 @@
 ﻿using Azure.Messaging.ServiceBus;
+using System.Data;
 using LoanService.Infrastructure.Persistence;
 using LoanService.Infrastructure.Persistence.Outbox;
 using Microsoft.EntityFrameworkCore;
@@ -32,17 +33,10 @@ internal sealed class OutboxProcessor
     public async Task<int> ProcessBatchAsync(
         CancellationToken cancellationToken)
     {
-        var now = _timeProvider.GetUtcNow();
-
-        var messages = await _dbContext.OutboxMessages
-            .Where(message =>
-                message.Status == OutboxMessageStatus.Pending &&
-                message.RetryCount < _options.MaximumRetryCount &&
-                (message.NextAttemptOnUtc == null ||
-                 message.NextAttemptOnUtc <= now))
-            .OrderBy(message => message.OccurredOnUtc)
-            .Take(_options.BatchSize)
-            .ToListAsync(cancellationToken);
+        var publisherId = $"{Environment.MachineName}:{Guid.NewGuid():N}";
+        var messages = await ClaimBatchAsync(
+            publisherId,
+            cancellationToken);
 
         if (messages.Count == 0)
         {
@@ -57,6 +51,48 @@ internal sealed class OutboxProcessor
         }
 
         return messages.Count;
+    }
+
+    private async Task<List<OutboxMessage>> ClaimBatchAsync(
+        string publisherId,
+        CancellationToken cancellationToken)
+    {
+        var now = _timeProvider.GetUtcNow();
+        var lockExpiredBefore = now.Subtract(
+            TimeSpan.FromSeconds(_options.ProcessingTimeoutSeconds));
+
+        await using var transaction =
+            await _dbContext.Database.BeginTransactionAsync(
+                IsolationLevel.Serializable,
+                cancellationToken);
+
+        var messages = await _dbContext.OutboxMessages
+            .Where(message =>
+                (message.Status == OutboxMessageStatus.Pending &&
+                 (message.NextAttemptOnUtc == null ||
+                  message.NextAttemptOnUtc <= now)) ||
+                (message.Status == OutboxMessageStatus.Processing &&
+                 message.ProcessingStartedOnUtc <= lockExpiredBefore))
+            .Where(message =>
+                message.RetryCount < _options.MaximumRetryCount)
+            .OrderBy(message => message.OccurredOnUtc)
+            .Take(_options.BatchSize)
+            .ToListAsync(cancellationToken);
+
+        foreach (var message in messages)
+        {
+            if (message.Status == OutboxMessageStatus.Processing)
+            {
+                message.ResetForRetry();
+            }
+
+            message.MarkAsProcessing(publisherId, now);
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+
+        return messages;
     }
 
     private async Task ProcessMessageAsync(

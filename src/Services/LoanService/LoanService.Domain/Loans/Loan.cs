@@ -2,6 +2,10 @@
 
 public sealed class Loan
 {
+    public const int MaximumLoanNumberLength = 50;
+    public const int CurrencyLength = 3;
+    public const decimal MaximumRequestedAmount = 9999999999999999.99m;
+
     private Loan()
     {
     }
@@ -71,11 +75,32 @@ public sealed class Loan
                 nameof(loanNumber));
         }
 
+        if (loanNumber.Trim().Length > MaximumLoanNumberLength)
+        {
+            throw new ArgumentException(
+                $"Loan number cannot exceed {MaximumLoanNumberLength} characters.",
+                nameof(loanNumber));
+        }
+
         if (requestedAmount <= 0)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(requestedAmount),
                 "Requested amount must be greater than zero.");
+        }
+
+        if (requestedAmount > MaximumRequestedAmount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(requestedAmount),
+                $"Requested amount cannot exceed {MaximumRequestedAmount}.");
+        }
+
+        if (decimal.Round(requestedAmount, 2) != requestedAmount)
+        {
+            throw new ArgumentException(
+                "Requested amount cannot have more than two decimal places.",
+                nameof(requestedAmount));
         }
 
         if (string.IsNullOrWhiteSpace(currency))
@@ -85,12 +110,23 @@ public sealed class Loan
                 nameof(currency));
         }
 
+        var normalizedCurrency = currency.Trim().ToUpperInvariant();
+
+        if (normalizedCurrency.Length != CurrencyLength ||
+            !normalizedCurrency.All(character =>
+                character is >= 'A' and <= 'Z'))
+        {
+            throw new ArgumentException(
+                "Currency must contain exactly three letters.",
+                nameof(currency));
+        }
+
         return new Loan(
             id,
             loanNumber.Trim(),
             customerId,
             requestedAmount,
-            currency.Trim().ToUpperInvariant(),
+            normalizedCurrency,
             createdOnUtc);
     }
 }

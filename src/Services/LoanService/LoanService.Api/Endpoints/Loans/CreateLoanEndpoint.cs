@@ -1,5 +1,6 @@
 ﻿using LoanService.Api.Contracts.Loans;
 using LoanService.Application.Loans.CreateLoan;
+using LoanService.Domain.Loans;
 using MediatR;
 
 namespace LoanService.Api.Endpoints.Loans;
@@ -25,6 +26,15 @@ public static class CreateLoanEndpoint
                         });
                     }
 
+                    if (request.LoanNumber.Trim().Length >
+                        Loan.MaximumLoanNumberLength)
+                    {
+                        return Results.BadRequest(new
+                        {
+                            Error = $"Loan number cannot exceed {Loan.MaximumLoanNumberLength} characters."
+                        });
+                    }
+
                     if (request.CustomerId == Guid.Empty)
                     {
                         return Results.BadRequest(new
@@ -41,11 +51,43 @@ public static class CreateLoanEndpoint
                         });
                     }
 
+                    if (request.RequestedAmount >
+                        Loan.MaximumRequestedAmount)
+                    {
+                        return Results.BadRequest(new
+                        {
+                            Error = $"Requested amount cannot exceed {Loan.MaximumRequestedAmount}."
+                        });
+                    }
+
+                    if (decimal.Round(request.RequestedAmount, 2) !=
+                        request.RequestedAmount)
+                    {
+                        return Results.BadRequest(new
+                        {
+                            Error = "Requested amount cannot have more than two decimal places."
+                        });
+                    }
+
                     if (string.IsNullOrWhiteSpace(request.Currency))
                     {
                         return Results.BadRequest(new
                         {
                             Error = "Currency is required."
+                        });
+                    }
+
+
+                    var normalizedCurrency =
+                        request.Currency.Trim().ToUpperInvariant();
+
+                    if (normalizedCurrency.Length != Loan.CurrencyLength ||
+                        !normalizedCurrency.All(character =>
+                            character is >= 'A' and <= 'Z'))
+                    {
+                        return Results.BadRequest(new
+                        {
+                            Error = "Currency must contain exactly three letters."
                         });
                     }
 

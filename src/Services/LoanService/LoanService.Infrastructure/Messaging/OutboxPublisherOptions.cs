@@ -11,4 +11,6 @@ public sealed class OutboxPublisherOptions
     public int PollingIntervalSeconds { get; init; } = 5;
 
     public int MaximumRetryCount { get; init; } = 10;
+
+    public int ProcessingTimeoutSeconds { get; init; } = 300;
 }

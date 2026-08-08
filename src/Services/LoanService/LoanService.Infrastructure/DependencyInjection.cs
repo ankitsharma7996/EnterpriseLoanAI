@@ -39,7 +39,16 @@ public static class DependencyInjection
         services
             .AddOptions<OutboxPublisherOptions>()
             .Bind(configuration.GetSection(
-                OutboxPublisherOptions.SectionName));
+                OutboxPublisherOptions.SectionName))
+            .Validate(options => options.BatchSize > 0,
+                "Outbox batch size must be greater than zero.")
+            .Validate(options => options.PollingIntervalSeconds > 0,
+                "Outbox polling interval must be greater than zero.")
+            .Validate(options => options.MaximumRetryCount > 0,
+                "Outbox maximum retry count must be greater than zero.")
+            .Validate(options => options.ProcessingTimeoutSeconds > 0,
+                "Outbox processing timeout must be greater than zero.")
+            .ValidateOnStart();
 
         var publisherOptions = configuration
             .GetSection(OutboxPublisherOptions.SectionName)
