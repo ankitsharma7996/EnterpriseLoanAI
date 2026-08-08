@@ -1,15 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
 using LoanService.Api.Contracts.Loans;
+using LoanService.Api.Idempotency;
 using LoanService.Api.Middleware;
 using LoanService.Infrastructure.Persistence;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
 using Xunit;
 
 namespace LoanService.Api.Tests.Integration;
@@ -72,10 +68,16 @@ public sealed class CorrelationIdPersistenceTests
             100_000m,
             "USD");
 
-        return new HttpRequestMessage(HttpMethod.Post, "/api/loans")
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/loans")
         {
             Content = JsonContent.Create(payload)
         };
+
+        request.Headers.Add(
+            IdempotencyHeaders.HeaderName,
+            Guid.NewGuid().ToString());
+
+        return request;
     }
 
     private static async Task<Guid> GetPersistedCorrelationIdAsync(
@@ -90,27 +92,4 @@ public sealed class CorrelationIdPersistenceTests
             .SingleAsync(TestContext.Current.CancellationToken);
     }
 
-    private sealed class LoanServiceApiFactory
-        : WebApplicationFactory<Program>
-    {
-        private readonly string _databaseName = Guid.NewGuid().ToString();
-
-        protected override void ConfigureWebHost(
-            IWebHostBuilder builder)
-        {
-            builder.UseEnvironment("Testing");
-            builder.UseSetting(
-                "ConnectionStrings:LoanDatabase",
-                "Server=(localdb)\\mssqllocaldb;Database=Test;");
-            builder.ConfigureServices(services =>
-            {
-                services.AddLogging(logging => logging.ClearProviders());
-                services.RemoveAll<DbContextOptions<LoanDbContext>>();
-                services.RemoveAll<
-                    IDbContextOptionsConfiguration<LoanDbContext>>();
-                services.AddDbContext<LoanDbContext>(options =>
-                    options.UseInMemoryDatabase(_databaseName));
-            });
-        }
-    }
 }

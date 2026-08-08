@@ -35,6 +35,16 @@ public sealed class ExceptionHandlingMiddleware
                 exception.Errors
             });
         }
+        catch (BadHttpRequestException exception)
+        {
+            context.Response.StatusCode =
+                StatusCodes.Status400BadRequest;
+
+            await context.Response.WriteAsJsonAsync(new
+            {
+                Error = exception.Message
+            });
+        }
         catch (InvalidOperationException exception)
         {
             context.Response.StatusCode =

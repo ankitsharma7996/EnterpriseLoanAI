@@ -1,4 +1,5 @@
 ﻿using LoanService.Api.Contracts.Loans;
+using LoanService.Api.Idempotency;
 using LoanService.Application.Abstractions.Context;
 using LoanService.Application.Loans.CreateLoan;
 using MediatR;
@@ -11,30 +12,34 @@ public static class CreateLoanEndpoint
         this IEndpointRouteBuilder endpoints)
     {
         endpoints.MapPost(
-                "/api/loans",
-                async (
-                    CreateLoanRequest request,
-                    ISender sender,
-                    ICorrelationContext correlationContext,
-                    CancellationToken cancellationToken) =>
-                {
-                    var correlationId = correlationContext.CorrelationId;
+            "/api/loans",
+            async (
+                CreateLoanRequest request,
+                HttpRequest httpRequest,
+                ISender sender,
+                ICorrelationContext correlationContext,
+                CancellationToken cancellationToken) =>
+            {
+                _ = IdempotencyKeyResolver.Resolve(httpRequest);
 
-                    var command = new CreateLoanCommand(
-                        request.LoanNumber,
-                        request.CustomerId,
-                        request.RequestedAmount,
-                        request.Currency,
-                        correlationId);
+                var correlationId =
+                    correlationContext.CorrelationId;
 
-                    var result = await sender.Send(
-                        command,
-                        cancellationToken);
+                var command = new CreateLoanCommand(
+                    request.LoanNumber,
+                    request.CustomerId,
+                    request.RequestedAmount,
+                    request.Currency,
+                    correlationId);
 
-                    return Results.Created(
-                        $"/api/loans/{result.LoanId}",
-                        result);
-                })
+                var result = await sender.Send(
+                    command,
+                    cancellationToken);
+
+                return Results.Created(
+                    $"/api/loans/{result.LoanId}",
+                    result);
+            })
             .WithName("CreateLoan")
             .WithTags("Loans")
             .Produces<CreateLoanResult>(
