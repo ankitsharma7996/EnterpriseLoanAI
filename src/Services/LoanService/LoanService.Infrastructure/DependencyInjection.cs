@@ -39,7 +39,16 @@ public static class DependencyInjection
         services
             .AddOptions<OutboxPublisherOptions>()
             .Bind(configuration.GetSection(
-                OutboxPublisherOptions.SectionName));
+                OutboxPublisherOptions.SectionName))
+            .Validate(options => options.BatchSize > 0,
+                "Outbox batch size must be greater than zero.")
+            .Validate(options => options.PollingIntervalSeconds > 0,
+                "Outbox polling interval must be greater than zero.")
+            .Validate(options => options.MaximumRetryCount > 0,
+                "Outbox maximum retry count must be greater than zero.")
+            .Validate(options => options.ProcessingTimeoutSeconds > 0,
+                "Outbox processing timeout must be greater than zero.")
+            .ValidateOnStart();
 
         var publisherOptions = configuration
             .GetSection(OutboxPublisherOptions.SectionName)
@@ -77,6 +86,8 @@ public static class DependencyInjection
         services.AddSingleton(
             new ServiceBusClient(serviceBusConnectionString));
 
+        services.AddSingleton<OutboxPublisherIdentity>();
+
         services.AddSingleton(serviceProvider =>
         {
             var client =
@@ -86,6 +97,9 @@ public static class DependencyInjection
                 serviceBusOptions.LoanEventsTopicName);
         });
 
+        services.AddScoped<IOutboxStore, SqlServerOutboxStore>();
+        services.AddScoped<IOutboxMessagePublisher,
+            ServiceBusOutboxMessagePublisher>();
         services.AddScoped<OutboxProcessor>();
 
         services.AddHostedService<

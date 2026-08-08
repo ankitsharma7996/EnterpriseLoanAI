@@ -2,6 +2,10 @@
 
 public sealed class Loan
 {
+    public const int MaximumLoanNumberLength = 50;
+    // Lending policy; deliberately independent from database capacity.
+    public const decimal MaximumBusinessRequestedAmount = 1_000_000_000m;
+
     private Loan()
     {
     }
@@ -71,11 +75,32 @@ public sealed class Loan
                 nameof(loanNumber));
         }
 
+        if (loanNumber.Trim().Length > MaximumLoanNumberLength)
+        {
+            throw new ArgumentException(
+                $"Loan number cannot exceed {MaximumLoanNumberLength} characters.",
+                nameof(loanNumber));
+        }
+
         if (requestedAmount <= 0)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(requestedAmount),
                 "Requested amount must be greater than zero.");
+        }
+
+        if (requestedAmount > MaximumBusinessRequestedAmount)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(requestedAmount),
+                $"Requested amount cannot exceed {MaximumBusinessRequestedAmount}.");
+        }
+
+        if (decimal.Round(requestedAmount, 2) != requestedAmount)
+        {
+            throw new ArgumentException(
+                "Requested amount cannot have more than two decimal places.",
+                nameof(requestedAmount));
         }
 
         if (string.IsNullOrWhiteSpace(currency))
@@ -85,12 +110,15 @@ public sealed class Loan
                 nameof(currency));
         }
 
+        var supportedCurrency =
+            global::LoanService.Domain.Loans.Currency.Create(currency);
+
         return new Loan(
             id,
             loanNumber.Trim(),
             customerId,
             requestedAmount,
-            currency.Trim().ToUpperInvariant(),
+            supportedCurrency.Code,
             createdOnUtc);
     }
 }

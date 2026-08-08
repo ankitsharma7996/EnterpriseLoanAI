@@ -1,6 +1,8 @@
 ﻿using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
+using LoanService.Application.Abstractions.Validation;
+
 namespace LoanService.Api.Middleware;
 
 public sealed class ExceptionHandlingMiddleware
@@ -21,6 +23,17 @@ public sealed class ExceptionHandlingMiddleware
         try
         {
             await _next(context);
+        }
+        catch (ApplicationValidationException exception)
+        {
+            context.Response.StatusCode =
+                StatusCodes.Status400BadRequest;
+
+            await context.Response.WriteAsJsonAsync(new
+            {
+                Error = exception.Message,
+                exception.Errors
+            });
         }
         catch (InvalidOperationException exception)
         {

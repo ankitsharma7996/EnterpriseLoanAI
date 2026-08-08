@@ -22,7 +22,9 @@ internal sealed class LoanConfiguration
             .IsUnique();
 
         builder.Property(loan => loan.RequestedAmount)
-            .HasPrecision(18, 2)
+            .HasPrecision(
+                LoanDatabaseConstraints.AmountPrecision,
+                LoanDatabaseConstraints.AmountScale)
             .IsRequired();
 
         builder.Property(loan => loan.Currency)

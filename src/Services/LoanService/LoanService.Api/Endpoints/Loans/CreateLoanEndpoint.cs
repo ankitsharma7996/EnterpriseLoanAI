@@ -17,39 +17,9 @@ public static class CreateLoanEndpoint
                     ISender sender,
                     CancellationToken cancellationToken) =>
                 {
-                    if (string.IsNullOrWhiteSpace(request.LoanNumber))
-                    {
-                        return Results.BadRequest(new
-                        {
-                            Error = "Loan number is required."
-                        });
-                    }
-
-                    if (request.CustomerId == Guid.Empty)
-                    {
-                        return Results.BadRequest(new
-                        {
-                            Error = "Customer ID is required."
-                        });
-                    }
-
-                    if (request.RequestedAmount <= 0)
-                    {
-                        return Results.BadRequest(new
-                        {
-                            Error = "Requested amount must be greater than zero."
-                        });
-                    }
-
-                    if (string.IsNullOrWhiteSpace(request.Currency))
-                    {
-                        return Results.BadRequest(new
-                        {
-                            Error = "Currency is required."
-                        });
-                    }
-
-                    var correlationId = TryGetCorrelationId(httpContext.Request.Headers) ?? Guid.NewGuid();
+                    var correlationId =
+                        TryGetCorrelationId(httpContext.Request.Headers)
+                        ?? Guid.NewGuid();
 
                     var command = new CreateLoanCommand(
                         request.LoanNumber,
