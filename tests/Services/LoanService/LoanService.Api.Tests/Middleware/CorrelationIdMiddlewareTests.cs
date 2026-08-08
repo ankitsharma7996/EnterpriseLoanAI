@@ -1,5 +1,6 @@
 using LoanService.Api.Middleware;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -11,10 +12,10 @@ public sealed class CorrelationIdMiddlewareTests
     public async Task Missing_header_generates_id_and_returns_same_id()
     {
         // Arrange
-        var context = new DefaultHttpContext();
-        var middleware = CreateMiddleware(async httpContext =>
-            await httpContext.Response.StartAsync(
-                TestContext.Current.CancellationToken));
+        var responseFeature = new TestHttpResponseFeature();
+        var context = CreateHttpContext(responseFeature);
+        var middleware = CreateMiddleware(_ =>
+            responseFeature.StartResponseAsync());
 
         // Act
         await middleware.InvokeAsync(context);
@@ -32,12 +33,12 @@ public sealed class CorrelationIdMiddlewareTests
     {
         // Arrange
         var suppliedId = Guid.NewGuid();
-        var context = new DefaultHttpContext();
+        var responseFeature = new TestHttpResponseFeature();
+        var context = CreateHttpContext(responseFeature);
         context.Request.Headers[CorrelationIdMiddleware.HeaderName] =
             suppliedId.ToString();
-        var middleware = CreateMiddleware(async httpContext =>
-            await httpContext.Response.StartAsync(
-                TestContext.Current.CancellationToken));
+        var middleware = CreateMiddleware(_ =>
+            responseFeature.StartResponseAsync());
 
         // Act
         await middleware.InvokeAsync(context);
@@ -53,12 +54,12 @@ public sealed class CorrelationIdMiddlewareTests
     public async Task Invalid_header_generates_new_id()
     {
         // Arrange
-        var context = new DefaultHttpContext();
+        var responseFeature = new TestHttpResponseFeature();
+        var context = CreateHttpContext(responseFeature);
         context.Request.Headers[CorrelationIdMiddleware.HeaderName] =
             "not-a-guid";
-        var middleware = CreateMiddleware(async httpContext =>
-            await httpContext.Response.StartAsync(
-                TestContext.Current.CancellationToken));
+        var middleware = CreateMiddleware(_ =>
+            responseFeature.StartResponseAsync());
 
         // Act
         await middleware.InvokeAsync(context);
@@ -118,11 +119,59 @@ public sealed class CorrelationIdMiddlewareTests
             NullLogger<CorrelationIdMiddleware>.Instance);
     }
 
+    private static DefaultHttpContext CreateHttpContext(
+        TestHttpResponseFeature responseFeature)
+    {
+        var context = new DefaultHttpContext();
+        context.Features.Set<IHttpResponseFeature>(responseFeature);
+        return context;
+    }
+
     private static Guid GetResponseCorrelationId(HttpContext context)
     {
         var value = context.Response.Headers[
             CorrelationIdMiddleware.HeaderName].ToString();
         Assert.True(Guid.TryParse(value, out var correlationId));
         return correlationId;
+    }
+
+    private sealed class TestHttpResponseFeature : IHttpResponseFeature
+    {
+        private readonly Stack<(Func<object, Task> Callback, object State)>
+            _onStartingCallbacks = [];
+
+        public int StatusCode { get; set; } = StatusCodes.Status200OK;
+
+        public string? ReasonPhrase { get; set; }
+
+        public IHeaderDictionary Headers { get; set; } =
+            new HeaderDictionary();
+
+        public Stream Body { get; set; } = Stream.Null;
+
+        public bool HasStarted { get; private set; }
+
+        public void OnStarting(
+            Func<object, Task> callback,
+            object state)
+        {
+            _onStartingCallbacks.Push((callback, state));
+        }
+
+        public void OnCompleted(
+            Func<object, Task> callback,
+            object state)
+        {
+        }
+
+        public async Task StartResponseAsync()
+        {
+            while (_onStartingCallbacks.TryPop(out var registration))
+            {
+                await registration.Callback(registration.State);
+            }
+
+            HasStarted = true;
+        }
     }
 }
