@@ -1,6 +1,8 @@
+using LoanService.Api.Context;
 using LoanService.Api.Endpoints.Loans;
 using LoanService.Api.Middleware;
 using LoanService.Application;
+using LoanService.Application.Abstractions.Context;
 using LoanService.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,6 +10,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 
 builder.Services.AddApplication();
+builder.Services.AddHttpContextAccessor();
+
+builder.Services.AddScoped<
+    ICorrelationContext,
+    HttpCorrelationContext>();
 
 builder.Services.AddInfrastructure(
     builder.Configuration);
@@ -33,3 +40,5 @@ app.MapGet("/", () => Results.Ok(new
 app.MapCreateLoanEndpoint();
 
 app.Run();
+
+public partial class Program;

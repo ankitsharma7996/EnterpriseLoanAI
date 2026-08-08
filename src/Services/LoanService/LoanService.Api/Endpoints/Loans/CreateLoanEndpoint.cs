@@ -1,4 +1,5 @@
 ﻿using LoanService.Api.Contracts.Loans;
+using LoanService.Application.Abstractions.Context;
 using LoanService.Application.Loans.CreateLoan;
 using MediatR;
 
@@ -13,13 +14,11 @@ public static class CreateLoanEndpoint
                 "/api/loans",
                 async (
                     CreateLoanRequest request,
-                    HttpContext httpContext,
                     ISender sender,
+                    ICorrelationContext correlationContext,
                     CancellationToken cancellationToken) =>
                 {
-                    var correlationId =
-                        TryGetCorrelationId(httpContext.Request.Headers)
-                        ?? Guid.NewGuid();
+                    var correlationId = correlationContext.CorrelationId;
 
                     var command = new CreateLoanCommand(
                         request.LoanNumber,
@@ -46,19 +45,5 @@ public static class CreateLoanEndpoint
                 StatusCodes.Status409Conflict);
 
         return endpoints;
-    }
-
-    private static Guid? TryGetCorrelationId(IHeaderDictionary headers)
-    {
-        const string headerName = "X-Correlation-ID";
-
-        if (!headers.TryGetValue(headerName, out var value))
-        {
-            return null;
-        }
-
-        return Guid.TryParse(value.ToString(), out var correlationId)
-            ? correlationId
-            : null;
     }
 }
