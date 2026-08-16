@@ -1,5 +1,6 @@
 ﻿using LoanService.Application.Abstractions.Persistence;
 using LoanService.Domain.Loans;
+using LoanService.Infrastructure.Persistence.Idempotency;
 using LoanService.Infrastructure.Persistence.Outbox;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,6 +17,8 @@ public sealed class LoanDbContext : DbContext, IUnitOfWork
     public DbSet<Loan> Loans => Set<Loan>();
 
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+
+    public DbSet<IdempotencyRequest> IdempotencyRequests => Set<IdempotencyRequest>();
 
     protected override void OnModelCreating(
         ModelBuilder modelBuilder)
