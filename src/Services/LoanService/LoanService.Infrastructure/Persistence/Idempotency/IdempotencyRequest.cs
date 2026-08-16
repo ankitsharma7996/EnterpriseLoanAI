@@ -79,6 +79,13 @@ public sealed class IdempotencyRequest
                 nameof(requestHash));
         }
 
+        if (requestHash.Trim().Length != 64)
+        {
+            throw new ArgumentException(
+                "Request hash must be 64 characters.",
+                nameof(requestHash));
+        }
+
         if (expiresOnUtc <= createdOnUtc)
         {
             throw new ArgumentException(

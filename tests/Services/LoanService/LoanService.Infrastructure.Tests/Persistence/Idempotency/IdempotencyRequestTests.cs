@@ -153,6 +153,21 @@ public sealed class IdempotencyRequestTests
     }
 
     [Fact]
+    public void Create_WithInvalidRequestHashLength_ThrowsArgumentException()
+    {
+        var createdOnUtc = DateTimeOffset.UtcNow;
+
+        Assert.Throws<ArgumentException>(() =>
+            IdempotencyRequest.Create(
+                Guid.NewGuid(),
+                "ABC-123",
+                "CreateLoan",
+                "ABC",
+                createdOnUtc,
+                createdOnUtc.AddHours(24)));
+    }
+
+    [Fact]
     public void Create_WhenExpirationEqualsCreation_ThrowsArgumentException()
     {
         var createdOnUtc = DateTimeOffset.UtcNow;
