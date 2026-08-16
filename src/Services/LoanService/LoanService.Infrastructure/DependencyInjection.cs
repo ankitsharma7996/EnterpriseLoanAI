@@ -1,6 +1,8 @@
 ﻿using Azure.Messaging.ServiceBus;
+using LoanService.Application.Abstractions.Idempotency;
 using LoanService.Application.Abstractions.Messaging;
 using LoanService.Application.Abstractions.Persistence;
+using LoanService.Infrastructure.Idempotency;
 using LoanService.Infrastructure.Messaging;
 using LoanService.Infrastructure.Messaging.Outbox;
 using LoanService.Infrastructure.Persistence;
@@ -30,6 +32,9 @@ public static class DependencyInjection
 
         services.AddScoped<IUnitOfWork>(serviceProvider =>
             serviceProvider.GetRequiredService<LoanDbContext>());
+
+        services.AddScoped<IIdempotencyService, IdempotencyService>();
+        services.AddSingleton<IRequestHasher, Sha256RequestHasher>();
 
         services
             .AddOptions<ServiceBusOptions>()
