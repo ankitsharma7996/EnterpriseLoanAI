@@ -12,7 +12,7 @@ The evidence reviewed for this edition includes the current branch `feature/elai
 | ELAI-202 | Propagate Correlation ID into Commands and Outbox Events | Done | [#143](https://github.com/ankitsharma7996/EnterpriseLoanAI/pull/143) |
 | ELAI-203 | Define Idempotency-Key API Contract | Done (story status); repository discrepancy noted below | No PR found |
 | ELAI-204 | Add Idempotency Persistence Model | Done | [#144](https://github.com/ankitsharma7996/EnterpriseLoanAI/pull/144) |
-| ELAI-205 | Implement Duplicate Request Detection | In Progress | Not created |
+| ELAI-205 | Implement Duplicate Request Detection | In Progress | [#145](https://github.com/ankitsharma7996/EnterpriseLoanAI/pull/145) (draft) |
 
 # ELAI-201 — Implement Correlation ID Middleware
 
@@ -303,7 +303,7 @@ ELAI-204 models completion and failure state but does not provide transition met
 
 ## Status
 
-In Progress on `feature/elai-205-implement-duplicate-request-detection`. No ELAI-205 commit or pull request exists. The implementation described here is uncommitted working-tree state and must not be treated as merged behavior.
+In Progress on `feature/elai-205-implement-duplicate-request-detection`. The implementation was committed initially as `be9b9b2` and is under review in draft PR [#145](https://github.com/ankitsharma7996/EnterpriseLoanAI/pull/145). It must not be treated as merged behavior.
 
 ## Goal
 
