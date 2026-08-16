@@ -211,11 +211,11 @@ On commit `8f43d89`:
 - `tests/Services/LoanService/LoanService.Api.Tests/Integration/IdempotencyKeyContractTests.cs`
 - `tests/Services/LoanService/LoanService.Api.Tests/Integration/LoanServiceApiFactory.cs`
 
-The first two files also exist as uncommitted files on the current ELAI-205 branch. The current working-tree exception middleware does not contain ELAI-203's `BadHttpRequestException` mapping, and the ELAI-203 contract test file is absent.
+The ELAI-203 contract files, `BadHttpRequestException` mapping, and API contract tests are included in PR #145 so the current branch does not regress the completed HTTP contract.
 
 ## Remaining Limitations or Follow-up Work
 
-Reconcile ELAI-203 into the current branch, including its error mapping and contract tests, or document an intentional replacement. The current branch must not rely on untracked copies while the Done commit remains outside `main`.
+PR #145 restores the complete verified contract behavior, but the historical fact remains: commit `8f43d89` was not merged independently. Reviewers should treat the ELAI-203 files in PR #145 as an explicit reconciliation rather than an undocumented ELAI-205 dependency.
 
 # ELAI-204 — Add Idempotency Persistence Model
 
@@ -346,13 +346,13 @@ flowchart TD
 
 ## Tests
 
-Current uncommitted `CreateLoanIdempotencyTests` verifies:
+`CreateLoanIdempotencyTests` verifies:
 
 - A new key returns `201 Created`.
 - A sequential duplicate with the same key and payload returns `409 Conflict` and leaves one loan and one idempotency record.
 - Reusing the same key with a changed amount returns `409 Conflict` and leaves one loan and one idempotency record.
 
-The test factory replaces SQL Server with EF Core InMemory. After fixing service registration and adding required idempotency headers to the existing correlation tests, the current working tree passes all 34 tests (13 API and 21 Infrastructure) with MSBuild server reuse disabled for the local runner.
+The API test factory replaces SQL Server with EF Core InMemory for endpoint behavior. A separate `IdempotencyServiceSqlServerConcurrencyTests` test uses SQL Server LocalDB, two independent `LoanDbContext` instances, and a shared save interceptor that holds both contenders until both preliminary reads have completed. It then releases both inserts and verifies exactly one `Acquired`, one `AlreadyProcessing`, and one durable row. The branch passes all 40 tests (18 API and 22 Infrastructure) with MSBuild server reuse disabled for the local runner.
 
 ## Engineering Decisions
 
@@ -366,7 +366,7 @@ The test factory replaces SQL Server with EF Core InMemory. After fixing service
 
 The intended cross-instance algorithm is sound in shape: both contenders may read “missing,” but only one insert can satisfy the unique index. The loser handles SQL Server 2601/2627, detaches its failed entity, and reads the winner.
 
-This behavior is not yet proven by the current tests because EF Core InMemory neither enforces SQL Server's composite unique index nor produces `SqlException` 2601/2627. The required multiple-scope SQL Server concurrency integration test is absent.
+The LocalDB concurrency test proves this behavior against the SQL Server provider and the real composite unique index. Its synchronization point ensures both contenders pass the preliminary read before either insert proceeds, so the test exercises the duplicate-key loser path rather than only sequential lookup behavior.
 
 ## Source Locations
 
@@ -382,12 +382,11 @@ Current uncommitted files and modifications:
 - `src/Services/LoanService/LoanService.Api/Endpoints/Loans/CreateLoanEndpoint.cs`
 - `src/Services/LoanService/LoanService.Api/Endpoints/Loans/CreateLoan/CreateLoanOperation.cs`
 - `tests/Services/LoanService/LoanService.Api.Tests/Integration/Loans/CreateLoanIdempotencyTests.cs`
+- `tests/Services/LoanService/LoanService.Api.Tests/Integration/IdempotencyKeyContractTests.cs`
+- `tests/Services/LoanService/LoanService.Infrastructure.Tests/Idempotency/IdempotencyServiceSqlServerConcurrencyTests.cs`
 
 ## Remaining Work
 
-- Add SQL Server integration coverage with separate service scopes and simultaneous acquisition attempts, proving one owner and correct loser classification.
-- Cover the insert-race path and SQL error numbers 2601/2627 directly.
-- Restore or reconcile ELAI-203's `BadHttpRequestException` mapping and API contract tests; the current working tree otherwise maps a missing key through the generic 500 handler.
 - Define and test the documented in-progress response contract, including response body and any retry guidance.
 - Add unit tests for `Sha256RequestHasher`, `ResolveExisting` outcomes, normalization equivalence, and dependency-injection registration.
 - Add structured logging/metrics for acquired, duplicate, mismatch, race-lost, and database-failure outcomes without logging keys, hashes, or request PII unnecessarily.
@@ -395,7 +394,6 @@ Current uncommitted files and modifications:
 - Define abandoned `Processing` recovery. The current 24-hour expiration is hard-coded, not a lease, and is not used during acquisition.
 - Define `Failed` retry semantics. It currently falls through to `AlreadyProcessing`.
 - Implement completion and replay separately; the endpoint currently returns 409 for `AlreadyCompleted` and no code marks records completed.
-- Review formatting in `IdempotencyService` and ensure the completed diff passes repository style checks before commit.
 
 # Upcoming Work
 

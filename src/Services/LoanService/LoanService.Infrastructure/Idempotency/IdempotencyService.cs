@@ -66,28 +66,28 @@ internal sealed class IdempotencyService
         }
         catch (DbUpdateException exception)
             when (IsUniqueConstraintViolation(exception))
-                {
-                    _dbContext.Entry(request).State =
-                        EntityState.Detached;
+        {
+            _dbContext.Entry(request).State =
+                EntityState.Detached;
 
-                    existing =
-                        await _dbContext.IdempotencyRequests
-                            .AsNoTracking()
-                            .SingleOrDefaultAsync(
-                                x =>
-                                    x.Operation == operation &&
-                                    x.IdempotencyKey == idempotencyKey,
-                                cancellationToken);
+            existing =
+                await _dbContext.IdempotencyRequests
+                    .AsNoTracking()
+                    .SingleOrDefaultAsync(
+                        x =>
+                            x.Operation == operation &&
+                            x.IdempotencyKey == idempotencyKey,
+                        cancellationToken);
 
-                    if (existing is null)
-                    {
-                        throw;
-                    }
+            if (existing is null)
+            {
+                throw;
+            }
 
-                    return ResolveExisting(
-                        existing,
-                        requestHash);
-                }
+            return ResolveExisting(
+                existing,
+                requestHash);
+        }
     }
 
     private static bool IsUniqueConstraintViolation(DbUpdateException exception)
