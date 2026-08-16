@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using LoanService.Api.Contracts.Loans;
+using LoanService.Api.Idempotency;
 using LoanService.Api.Middleware;
 using LoanService.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
@@ -72,10 +73,16 @@ public sealed class CorrelationIdPersistenceTests
             100_000m,
             "USD");
 
-        return new HttpRequestMessage(HttpMethod.Post, "/api/loans")
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/loans")
         {
             Content = JsonContent.Create(payload)
         };
+
+        request.Headers.Add(
+            IdempotencyHeaders.HeaderName,
+            Guid.NewGuid().ToString("N"));
+
+        return request;
     }
 
     private static async Task<Guid> GetPersistedCorrelationIdAsync(
