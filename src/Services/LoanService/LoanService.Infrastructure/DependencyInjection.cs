@@ -43,16 +43,11 @@ public static class DependencyInjection
 
         services
             .AddOptions<OutboxPublisherOptions>()
-            .Bind(configuration.GetSection(
-                OutboxPublisherOptions.SectionName))
-            .Validate(options => options.BatchSize > 0,
-                "Outbox batch size must be greater than zero.")
-            .Validate(options => options.PollingIntervalSeconds > 0,
-                "Outbox polling interval must be greater than zero.")
-            .Validate(options => options.MaximumRetryCount > 0,
-                "Outbox maximum retry count must be greater than zero.")
-            .Validate(options => options.ProcessingTimeoutSeconds > 0,
-                "Outbox processing timeout must be greater than zero.")
+            .Bind(configuration.GetSection(OutboxPublisherOptions.SectionName))
+            .Validate(options => options.BatchSize > 0, "Outbox batch size must be greater than zero.")
+            .Validate(options => options.PollingIntervalSeconds > 0, "Outbox polling interval must be greater than zero.")
+            .Validate(options => options.MaximumRetryCount > 0, "Outbox maximum retry count must be greater than zero.")
+            .Validate(options => options.ProcessingTimeoutSeconds > 0, "Outbox processing timeout must be greater than zero.")
             .ValidateOnStart();
 
         var publisherOptions = configuration
@@ -65,14 +60,11 @@ public static class DependencyInjection
             return services;
         }
 
-        var serviceBusConnectionString =
-            configuration.GetConnectionString("AzureServiceBus");
+        var serviceBusConnectionString = configuration.GetConnectionString("AzureServiceBus");
 
         if (string.IsNullOrWhiteSpace(serviceBusConnectionString))
         {
-            throw new InvalidOperationException(
-                "Connection string 'AzureServiceBus' is required " +
-                "when OutboxPublisher is enabled.");
+            throw new InvalidOperationException("Connection string 'AzureServiceBus' is required " + "when OutboxPublisher is enabled.");
         }
 
         var serviceBusOptions = configuration
@@ -81,34 +73,23 @@ public static class DependencyInjection
             ?? throw new InvalidOperationException(
                 "Service Bus configuration was not found.");
 
-        if (string.IsNullOrWhiteSpace(
-            serviceBusOptions.LoanEventsTopicName))
+        if (string.IsNullOrWhiteSpace(serviceBusOptions.LoanEventsTopicName))
         {
-            throw new InvalidOperationException(
-                "Service Bus topic name is required.");
+            throw new InvalidOperationException("Service Bus topic name is required.");
         }
 
-        services.AddSingleton(
-            new ServiceBusClient(serviceBusConnectionString));
-
+        services.AddSingleton(new ServiceBusClient(serviceBusConnectionString));
         services.AddSingleton<OutboxPublisherIdentity>();
-
         services.AddSingleton(serviceProvider =>
         {
-            var client =
-                serviceProvider.GetRequiredService<ServiceBusClient>();
-
-            return client.CreateSender(
-                serviceBusOptions.LoanEventsTopicName);
+            var client = serviceProvider.GetRequiredService<ServiceBusClient>();
+            return client.CreateSender(serviceBusOptions.LoanEventsTopicName);
         });
 
         services.AddScoped<IOutboxStore, SqlServerOutboxStore>();
-        services.AddScoped<IOutboxMessagePublisher,
-            ServiceBusOutboxMessagePublisher>();
+        services.AddScoped<IOutboxMessagePublisher, ServiceBusOutboxMessagePublisher>();
         services.AddScoped<OutboxProcessor>();
-
-        services.AddHostedService<
-            OutboxPublisherBackgroundService>();
+        services.AddHostedService<OutboxPublisherBackgroundService>();
 
         return services;
     }

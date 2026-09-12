@@ -24,30 +24,19 @@ public static class CreateLoanEndpoint
                 CancellationToken cancellationToken) =>
             {
                 // 1. Get and validate Idempotency-Key from HTTP header
-                var idempotencyKey =
-                    IdempotencyKeyResolver.Resolve(httpRequest);
+                var idempotencyKey = IdempotencyKeyResolver.Resolve(httpRequest);
 
                 // 2. Create normalized representation for hashing
                 var hashInput = new
                 {
-                    LoanNumber =
-                        request.LoanNumber
-                            .Trim()
-                            .ToUpperInvariant(),
-
+                    LoanNumber = request.LoanNumber.Trim().ToUpperInvariant(),
                     request.CustomerId,
-
                     request.RequestedAmount,
-
-                    Currency =
-                        request.Currency
-                            .Trim()
-                            .ToUpperInvariant()
+                    Currency = request.Currency.Trim().ToUpperInvariant()
                 };
 
                 // 3. Calculate deterministic request hash
-                var requestHash =
-                    requestHasher.ComputeHash(hashInput);
+                var requestHash = requestHasher.ComputeHash(hashInput);
 
                 // 4. Try to acquire this Idempotency-Key
                 var acquireResult =

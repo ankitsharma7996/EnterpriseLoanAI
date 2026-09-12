@@ -37,13 +37,10 @@ internal sealed class IdempotencyService
 
         if (existing is not null)
         {
-            return ResolveExisting(
-                existing,
-                requestHash);
+            return ResolveExisting(existing, requestHash);
         }
 
-        var now =
-            _timeProvider.GetUtcNow();
+        var now = _timeProvider.GetUtcNow();
 
         var request =
             IdempotencyRequest.Create(
@@ -58,17 +55,14 @@ internal sealed class IdempotencyService
 
         try
         {
-            await _dbContext.SaveChangesAsync(
-                cancellationToken);
+            await _dbContext.SaveChangesAsync(cancellationToken);
 
-            return new IdempotencyAcquireResult(
-                IdempotencyAcquireStatus.Acquired);
+            return new IdempotencyAcquireResult(IdempotencyAcquireStatus.Acquired);
         }
         catch (DbUpdateException exception)
             when (IsUniqueConstraintViolation(exception))
         {
-            _dbContext.Entry(request).State =
-                EntityState.Detached;
+            _dbContext.Entry(request).State = EntityState.Detached;
 
             existing =
                 await _dbContext.IdempotencyRequests
@@ -95,7 +89,7 @@ internal sealed class IdempotencyService
         return exception.InnerException is SqlException sqlException &&
                sqlException.Number is 2601 or 2627;
     }
-    
+
 
     private static IdempotencyAcquireResult ResolveExisting(
         IdempotencyRequest existing,
@@ -106,25 +100,19 @@ internal sealed class IdempotencyService
                 requestHash,
                 StringComparison.Ordinal))
         {
-            return new IdempotencyAcquireResult(
-                IdempotencyAcquireStatus.RequestMismatch);
+            return new IdempotencyAcquireResult(IdempotencyAcquireStatus.RequestMismatch);
         }
 
         return existing.Status switch
         {
             IdempotencyRequestStatus.Processing =>
-                new IdempotencyAcquireResult(
-                    IdempotencyAcquireStatus.AlreadyProcessing),
+                new IdempotencyAcquireResult(IdempotencyAcquireStatus.AlreadyProcessing),
 
             IdempotencyRequestStatus.Completed =>
-                new IdempotencyAcquireResult(
-                    IdempotencyAcquireStatus.AlreadyCompleted,
-                    existing.ResponseStatusCode,
-                    existing.ResponseBody),
+                new IdempotencyAcquireResult(IdempotencyAcquireStatus.AlreadyCompleted, existing.ResponseStatusCode, existing.ResponseBody),
 
             _ =>
-                new IdempotencyAcquireResult(
-                    IdempotencyAcquireStatus.AlreadyProcessing)
+                new IdempotencyAcquireResult(IdempotencyAcquireStatus.AlreadyProcessing)
         };
     }
 }

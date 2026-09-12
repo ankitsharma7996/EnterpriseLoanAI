@@ -7,8 +7,7 @@ public sealed class HttpCorrelationContext : ICorrelationContext
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public HttpCorrelationContext(
-        IHttpContextAccessor httpContextAccessor)
+    public HttpCorrelationContext(IHttpContextAccessor httpContextAccessor)
     {
         _httpContextAccessor = httpContextAccessor;
     }

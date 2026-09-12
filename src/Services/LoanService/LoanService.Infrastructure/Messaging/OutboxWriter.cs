@@ -17,9 +17,7 @@ internal sealed class OutboxWriter : IOutboxWriter
         _dbContext = dbContext;
     }
 
-    public async Task AddAsync(
-        IIntegrationEvent integrationEvent,
-        CancellationToken cancellationToken)
+    public async Task AddAsync(IIntegrationEvent integrationEvent, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(integrationEvent);
 
